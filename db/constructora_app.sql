@@ -1,47 +1,31 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Servidor: 127.0.0.1
--- Tiempo de generación: 14-09-2026 a las 22:53:23
--- Versión del servidor: 10.4.32-MariaDB
--- Versión de PHP: 8.2.12
-
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+-- PostgreSQL script for Supabase
 START TRANSACTION;
-SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
 
 --
--- Base de datos: `constructora_app`
+-- Base de datos: constructora_app
 --
 
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `inventario`
+-- Estructura de tabla para la tabla inventario
 --
 
-CREATE TABLE `inventario` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `nombre` varchar(160) NOT NULL,
-  `cantidad` int(11) NOT NULL DEFAULT 0,
-  `ubicacion_id` bigint(20) UNSIGNED DEFAULT NULL,
-  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE inventario (
+  id BIGSERIAL PRIMARY KEY,
+  nombre VARCHAR(160) NOT NULL,
+  cantidad INTEGER NOT NULL DEFAULT 0,
+  ubicacion_id BIGINT DEFAULT NULL,
+  created_by BIGINT DEFAULT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 --
--- Volcado de datos para la tabla `inventario`
+-- Volcado de datos para la tabla inventario
 --
 
-INSERT INTO `inventario` (`id`, `nombre`, `cantidad`, `ubicacion_id`, `created_by`, `created_at`, `updated_at`) VALUES
+INSERT INTO inventario (id, nombre, cantidad, ubicacion_id, created_by, created_at, updated_at) VALUES
 (53, 'Andamio 1-1/2', 54, 24, NULL, '2025-10-30 23:20:48', '2025-11-03 18:12:44'),
 (54, 'Andamio 2-1/2', 25, 24, NULL, '2025-10-30 23:20:48', '2025-10-30 23:20:48'),
 (55, 'Tijera para andamio (chica)', 25, 24, NULL, '2025-10-30 23:20:48', '2025-10-30 23:20:48'),
@@ -300,74 +284,78 @@ INSERT INTO `inventario` (`id`, `nombre`, `cantidad`, `ubicacion_id`, `created_b
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `mantenimientos`
+-- Estructura de tabla para la tabla mantenimientos
 --
 
-CREATE TABLE `mantenimientos` (
-  `id` char(36) NOT NULL,
-  `vehiculo_id` bigint(20) UNSIGNED NOT NULL,
-  `fecha` date NOT NULL,
-  `servicio` varchar(160) NOT NULL,
-  `kilometraje` int(11) NOT NULL,
-  `lugar` varchar(160) NOT NULL,
-  `importe` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `notas` text NOT NULL,
-  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE mantenimientos (
+  id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  vehiculo_id BIGINT NOT NULL,
+  fecha DATE NOT NULL,
+  servicio VARCHAR(160) NOT NULL,
+  kilometraje INTEGER NOT NULL,
+  lugar VARCHAR(160) NOT NULL,
+  importe NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+  notas TEXT NOT NULL,
+  created_by BIGINT DEFAULT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
---
--- Disparadores `mantenimientos`
---
-DELIMITER $$
-CREATE TRIGGER `bi_maintenance_uuid` BEFORE INSERT ON `mantenimientos` FOR EACH ROW BEGIN
+CREATE OR REPLACE FUNCTION set_maintenance_uuid()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
   IF NEW.id IS NULL OR NEW.id = '' THEN
-    SET NEW.id = UUID();
+    NEW.id = gen_random_uuid()::text;
   END IF;
-END
-$$
-DELIMITER ;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER bi_maintenance_uuid
+BEFORE INSERT ON mantenimientos
+FOR EACH ROW EXECUTE FUNCTION set_maintenance_uuid();
 
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `movimientos`
+-- Estructura de tabla para la tabla movimientos
 --
 
-CREATE TABLE `movimientos` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `tipo` enum('create','update','delete') NOT NULL,
-  `entidad` varchar(40) NOT NULL,
-  `entidad_id` varchar(64) DEFAULT NULL,
-  `nombre_entidad` varchar(200) DEFAULT NULL,
-  `descripcion` varchar(280) NOT NULL,
-  `fecha_hora` datetime(3) NOT NULL,
-  `usuario_id` bigint(20) UNSIGNED DEFAULT NULL,
-  `nombre_actor` varchar(120) DEFAULT NULL,
-  `correo_actor` varchar(160) DEFAULT NULL,
-  `rol_actor` varchar(40) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE movimientos (
+  id BIGSERIAL PRIMARY KEY,
+  tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('create', 'update', 'delete')),
+  entidad VARCHAR(40) NOT NULL,
+  entidad_id VARCHAR(64) DEFAULT NULL,
+  nombre_entidad VARCHAR(200) DEFAULT NULL,
+  descripcion VARCHAR(280) NOT NULL,
+  fecha_hora TIMESTAMP(3) NOT NULL,
+  usuario_id BIGINT DEFAULT NULL,
+  nombre_actor VARCHAR(120) DEFAULT NULL,
+  correo_actor VARCHAR(160) DEFAULT NULL,
+  rol_actor VARCHAR(40) DEFAULT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `ubicaciones`
+-- Estructura de tabla para la tabla ubicaciones
 --
 
-CREATE TABLE `ubicaciones` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `nombre` varchar(120) NOT NULL,
-  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE ubicaciones (
+  id BIGSERIAL PRIMARY KEY,
+  nombre VARCHAR(120) NOT NULL,
+  created_by BIGINT DEFAULT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 --
--- Volcado de datos para la tabla `ubicaciones`
+-- Volcado de datos para la tabla ubicaciones
 --
 
-INSERT INTO `ubicaciones` (`id`, `nombre`, `created_by`, `created_at`) VALUES
+INSERT INTO ubicaciones (id, nombre, created_by, created_at) VALUES
 (24, 'Rancho', NULL, '2025-10-30 22:24:52'),
 (25, 'Contenedor verde (rancho)', NULL, '2025-10-30 22:54:12'),
 (26, 'Oficina móvil Reynosa', NULL, '2025-10-30 22:54:34'),
@@ -381,57 +369,57 @@ INSERT INTO `ubicaciones` (`id`, `nombre`, `created_by`, `created_at`) VALUES
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `usuarios`
+-- Estructura de tabla para la tabla usuarios
 --
 
-CREATE TABLE `usuarios` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `nombre` varchar(80) NOT NULL,
-  `apellido` varchar(80) NOT NULL,
-  `email` varchar(160) NOT NULL,
-  `password_hash` varchar(512) NOT NULL,
-  `rol` enum('admin','user') NOT NULL DEFAULT 'user',
-  `activo` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE usuarios (
+  id BIGSERIAL PRIMARY KEY,
+  nombre VARCHAR(80) NOT NULL,
+  apellido VARCHAR(80) NOT NULL,
+  email VARCHAR(160) NOT NULL,
+  password_hash VARCHAR(512) NOT NULL,
+  rol VARCHAR(10) NOT NULL DEFAULT 'user' CHECK (rol IN ('admin', 'user')),
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 --
--- Volcado de datos para la tabla `usuarios`
+-- Volcado de datos para la tabla usuarios
 --
 
-INSERT INTO `usuarios` (`id`, `nombre`, `apellido`, `email`, `password_hash`, `rol`, `activo`, `created_at`, `updated_at`) VALUES
-(15, 'Administrador', 'General', 'Administrador@brunandfer.com', '$2b$12$VvcCbcvwv9cxYVR96Ho3qeEb8wZNcW7opS6m29lKnfCWXHRfxZOui', 'admin', 1, '2026-04-25 00:50:50', '2026-04-25 00:59:48'),
-(19, 'Sandra', 'Piedra', 'Sandra.piedra@gmail.com', '$2b$12$FwLShliXQLYPM.S3tzqojuujD111qCgZUG.gvN9iQMAvUTRSO9DUK', 'admin', 1, '2026-04-25 17:00:58', '2026-04-25 17:00:58'),
-(22, 'Maria', 'santillan', 'maria1@gmail.com', '$2b$12$03U0QkzdpV5qpDEvLiQcZ.NkuhfS0G.avmtOApIyJl4edb2zmC8ny', 'user', 1, '2026-05-22 01:02:23', '2026-05-22 01:02:23'),
-(24, 'Edgar Jair', 'García Santillán', 'jair_1999@live.com.mx', '$2b$12$sDjli4F6PZhSLzRD3Eutt.NlJIcJGiPNs/.jsaTbqdrkszo1QPwzq', 'user', 1, '2026-05-23 01:08:01', '2026-05-23 01:08:01');
+INSERT INTO usuarios (id, nombre, apellido, email, password_hash, rol, activo, created_at, updated_at) VALUES
+(15, 'Administrador', 'General', 'Administrador@brunandfer.com', '$2b$12$VvcCbcvwv9cxYVR96Ho3qeEb8wZNcW7opS6m29lKnfCWXHRfxZOui', 'admin', TRUE, '2026-04-25 00:50:50', '2026-04-25 00:59:48'),
+(19, 'Sandra', 'Piedra', 'Sandra.piedra@gmail.com', '$2b$12$FwLShliXQLYPM.S3tzqojuujD111qCgZUG.gvN9iQMAvUTRSO9DUK', 'admin', TRUE, '2026-04-25 17:00:58', '2026-04-25 17:00:58'),
+(22, 'Maria', 'santillan', 'maria1@gmail.com', '$2b$12$03U0QkzdpV5qpDEvLiQcZ.NkuhfS0G.avmtOApIyJl4edb2zmC8ny', 'user', TRUE, '2026-05-22 01:02:23', '2026-05-22 01:02:23'),
+(24, 'Edgar Jair', 'García Santillán', 'jair_1999@live.com.mx', '$2b$12$sDjli4F6PZhSLzRD3Eutt.NlJIcJGiPNs/.jsaTbqdrkszo1QPwzq', 'user', TRUE, '2026-05-23 01:08:01', '2026-05-23 01:08:01');
 
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `vehiculos`
+-- Estructura de tabla para la tabla vehiculos
 --
 
-CREATE TABLE `vehiculos` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `nombre` varchar(160) NOT NULL,
-  `placa` varchar(40) NOT NULL,
-  `marca` varchar(80) NOT NULL,
-  `motor` varchar(80) NOT NULL,
-  `modelo` varchar(16) NOT NULL,
-  `numero_serie` varchar(64) NOT NULL,
-  `estado` enum('activo','mantenimiento','baja') NOT NULL DEFAULT 'activo',
-  `kilometraje` int(11) NOT NULL DEFAULT 0,
-  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE vehiculos (
+  id BIGSERIAL PRIMARY KEY,
+  nombre VARCHAR(160) NOT NULL,
+  placa VARCHAR(40) NOT NULL,
+  marca VARCHAR(80) NOT NULL,
+  motor VARCHAR(80) NOT NULL,
+  modelo VARCHAR(16) NOT NULL,
+  numero_serie VARCHAR(64) NOT NULL,
+  estado VARCHAR(20) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'mantenimiento', 'baja')),
+  kilometraje INTEGER NOT NULL DEFAULT 0,
+  created_by BIGINT DEFAULT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 --
--- Volcado de datos para la tabla `vehiculos`
+-- Volcado de datos para la tabla vehiculos
 --
 
-INSERT INTO `vehiculos` (`id`, `nombre`, `placa`, `marca`, `motor`, `modelo`, `numero_serie`, `estado`, `kilometraje`, `created_by`, `created_at`, `updated_at`) VALUES
+INSERT INTO vehiculos (id, nombre, placa, marca, motor, modelo, numero_serie, estado, kilometraje, created_by, created_at, updated_at) VALUES
 (70, 'RAM CREW CAB', 'FN-5127-B', 'N/A', 'N/A', '2012', 'N/A', 'activo', 0, NULL, '2025-11-11 18:25:53', '2026-04-23 17:11:59'),
 (71, 'RAM', 'FU-4928-A', 'N/A', 'N/A', '2005', 'N/A', 'activo', 0, NULL, '2025-11-11 18:25:53', '2025-11-11 18:25:53'),
 (72, 'RAM 4000', 'FU-7705-A', 'N/A', 'N/A', '2011', 'N/A', 'activo', 0, NULL, '2025-11-11 18:25:53', '2025-11-11 18:25:53'),
@@ -459,156 +447,136 @@ INSERT INTO `vehiculos` (`id`, `nombre`, `placa`, `marca`, `motor`, `modelo`, `n
 
 -- --------------------------------------------------------
 
+-- Estructura para la vista v_vehiculo_ultimo_mantenimiento
 --
--- Estructura Stand-in para la vista `v_vehiculo_ultimo_mantenimiento`
--- (Véase abajo para la vista actual)
---
-CREATE TABLE `v_vehiculo_ultimo_mantenimiento` (
-`vehiculo_id` bigint(20) unsigned
-,`nombre` varchar(160)
-,`ultima_fecha` date
-,`km_ultimo` int(11)
-);
-
--- --------------------------------------------------------
-
---
--- Estructura para la vista `v_vehiculo_ultimo_mantenimiento`
---
-DROP TABLE IF EXISTS `v_vehiculo_ultimo_mantenimiento`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_vehiculo_ultimo_mantenimiento`  AS SELECT `m`.`vehiculo_id` AS `vehiculo_id`, `v`.`nombre` AS `nombre`, max(`m`.`fecha`) AS `ultima_fecha`, (select `m2`.`kilometraje` from `mantenimientos` `m2` where `m2`.`vehiculo_id` = `m`.`vehiculo_id` order by `m2`.`fecha` desc,`m2`.`id` desc limit 1) AS `km_ultimo` FROM (`mantenimientos` `m` join `vehiculos` `v` on(`v`.`id` = `m`.`vehiculo_id`)) GROUP BY `m`.`vehiculo_id`, `v`.`nombre` ;
+CREATE VIEW v_vehiculo_ultimo_mantenimiento AS
+SELECT
+  m.vehiculo_id,
+  v.nombre,
+  MAX(m.fecha) AS ultima_fecha,
+  (
+    SELECT m2.kilometraje
+    FROM mantenimientos m2
+    WHERE m2.vehiculo_id = m.vehiculo_id
+    ORDER BY m2.fecha DESC, m2.id DESC
+    LIMIT 1
+  ) AS km_ultimo
+FROM mantenimientos m
+JOIN vehiculos v ON v.id = m.vehiculo_id
+GROUP BY m.vehiculo_id, v.nombre;
 
 --
 -- Índices para tablas volcadas
 --
 
 --
--- Indices de la tabla `inventario`
+-- Indices de la tabla inventario
 --
-ALTER TABLE `inventario`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_inventory_nombre_location` (`nombre`,`ubicacion_id`),
-  ADD KEY `idx_inventory_nombre` (`nombre`),
-  ADD KEY `idx_inventory_location` (`ubicacion_id`),
-  ADD KEY `fk_inventory_created_by` (`created_by`);
+CREATE UNIQUE INDEX uq_inventory_nombre_location ON inventario (nombre, ubicacion_id);
+CREATE INDEX idx_inventory_nombre ON inventario (nombre);
+CREATE INDEX idx_inventory_location ON inventario (ubicacion_id);
+CREATE INDEX idx_inventory_created_by ON inventario (created_by);
 
 --
--- Indices de la tabla `mantenimientos`
+-- Indices de la tabla mantenimientos
 --
-ALTER TABLE `mantenimientos`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_mnt_fecha` (`fecha`),
-  ADD KEY `idx_mnt_vehicle` (`vehiculo_id`),
-  ADD KEY `idx_maintenance_vehicle_date` (`vehiculo_id`,`fecha`),
-  ADD KEY `idx_maintenance_created_by` (`created_by`);
+CREATE INDEX idx_mnt_fecha ON mantenimientos (fecha);
+CREATE INDEX idx_mnt_vehicle ON mantenimientos (vehiculo_id);
+CREATE INDEX idx_maintenance_vehicle_date ON mantenimientos (vehiculo_id, fecha);
+CREATE INDEX idx_maintenance_created_by ON mantenimientos (created_by);
 
 --
--- Indices de la tabla `movimientos`
+-- Indices de la tabla movimientos
 --
-ALTER TABLE `movimientos`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_mov_ts` (`fecha_hora`),
-  ADD KEY `idx_mov_entity` (`entidad`,`entidad_id`),
-  ADD KEY `idx_movements_entity` (`entidad`,`entidad_id`),
-  ADD KEY `idx_movements_ts` (`fecha_hora`),
-  ADD KEY `fk_movements_user` (`usuario_id`);
+CREATE INDEX idx_mov_ts ON movimientos (fecha_hora);
+CREATE INDEX idx_mov_entity ON movimientos (entidad, entidad_id);
+CREATE INDEX idx_movements_user ON movimientos (usuario_id);
 
 --
--- Indices de la tabla `ubicaciones`
+-- Indices de la tabla ubicaciones
 --
-ALTER TABLE `ubicaciones`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_locations_name` (`nombre`),
-  ADD KEY `fk_locations_created_by` (`created_by`);
+CREATE UNIQUE INDEX uq_locations_name ON ubicaciones (nombre);
+CREATE INDEX idx_locations_created_by ON ubicaciones (created_by);
 
 --
--- Indices de la tabla `usuarios`
+-- Indices de la tabla usuarios
 --
-ALTER TABLE `usuarios`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_users_email` (`email`);
+CREATE UNIQUE INDEX uq_users_email ON usuarios (email);
 
 --
--- Indices de la tabla `vehiculos`
+-- Indices de la tabla vehiculos
 --
-ALTER TABLE `vehiculos`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_vehicles_placa` (`placa`),
-  ADD KEY `idx_vehicles_estado` (`estado`),
-  ADD KEY `idx_vehicles_created_by` (`created_by`);
+CREATE UNIQUE INDEX uq_vehicles_placa ON vehiculos (placa);
+CREATE INDEX idx_vehicles_estado ON vehiculos (estado);
+CREATE INDEX idx_vehicles_created_by ON vehiculos (created_by);
 
 --
--- AUTO_INCREMENT de las tablas volcadas
---
-
---
--- AUTO_INCREMENT de la tabla `inventario`
---
-ALTER TABLE `inventario`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=330;
-
---
--- AUTO_INCREMENT de la tabla `movimientos`
---
-ALTER TABLE `movimientos`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=855;
-
---
--- AUTO_INCREMENT de la tabla `ubicaciones`
---
-ALTER TABLE `ubicaciones`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
-
---
--- AUTO_INCREMENT de la tabla `usuarios`
---
-ALTER TABLE `usuarios`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
-
---
--- AUTO_INCREMENT de la tabla `vehiculos`
---
-ALTER TABLE `vehiculos`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=151;
+-- Preserve the next values from the original auto-increment counters.
+SELECT setval(pg_get_serial_sequence('inventario', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM inventario), 1), 329), true);
+SELECT setval(pg_get_serial_sequence('movimientos', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM movimientos), 1), 854), true);
+SELECT setval(pg_get_serial_sequence('ubicaciones', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM ubicaciones), 1), 46), true);
+SELECT setval(pg_get_serial_sequence('usuarios', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM usuarios), 1), 24), true);
+SELECT setval(pg_get_serial_sequence('vehiculos', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM vehiculos), 1), 150), true);
 
 --
 -- Restricciones para tablas volcadas
 --
 
 --
--- Filtros para la tabla `inventario`
+-- Filtros para la tabla inventario
 --
-ALTER TABLE `inventario`
-  ADD CONSTRAINT `fk_inventory_created_by` FOREIGN KEY (`created_by`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_inventory_location` FOREIGN KEY (`ubicacion_id`) REFERENCES `ubicaciones` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE inventario
+  ADD CONSTRAINT fk_inventory_created_by FOREIGN KEY (created_by) REFERENCES usuarios (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT fk_inventory_location FOREIGN KEY (ubicacion_id) REFERENCES ubicaciones (id) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
--- Filtros para la tabla `mantenimientos`
+-- Filtros para la tabla mantenimientos
 --
-ALTER TABLE `mantenimientos`
-  ADD CONSTRAINT `fk_mnt_created_by` FOREIGN KEY (`created_by`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_mnt_vehicle` FOREIGN KEY (`vehiculo_id`) REFERENCES `vehiculos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE mantenimientos
+  ADD CONSTRAINT fk_mnt_created_by FOREIGN KEY (created_by) REFERENCES usuarios (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT fk_mnt_vehicle FOREIGN KEY (vehiculo_id) REFERENCES vehiculos (id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Filtros para la tabla `movimientos`
+-- Filtros para la tabla movimientos
 --
-ALTER TABLE `movimientos`
-  ADD CONSTRAINT `fk_mov_user` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE movimientos
+  ADD CONSTRAINT fk_mov_user FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
--- Filtros para la tabla `ubicaciones`
+-- Filtros para la tabla ubicaciones
 --
-ALTER TABLE `ubicaciones`
-  ADD CONSTRAINT `fk_locations_created_by` FOREIGN KEY (`created_by`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE ubicaciones
+  ADD CONSTRAINT fk_locations_created_by FOREIGN KEY (created_by) REFERENCES usuarios (id) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
--- Filtros para la tabla `vehiculos`
+-- Filtros para la tabla vehiculos
 --
-ALTER TABLE `vehiculos`
-  ADD CONSTRAINT `fk_vehicles_created_by` FOREIGN KEY (`created_by`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE vehiculos
+  ADD CONSTRAINT fk_vehicles_created_by FOREIGN KEY (created_by) REFERENCES usuarios (id) ON DELETE SET NULL ON UPDATE CASCADE;
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER set_inventario_updated_at
+BEFORE UPDATE ON inventario
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER set_mantenimientos_updated_at
+BEFORE UPDATE ON mantenimientos
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER set_usuarios_updated_at
+BEFORE UPDATE ON usuarios
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER set_vehiculos_updated_at
+BEFORE UPDATE ON vehiculos
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
