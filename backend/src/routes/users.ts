@@ -9,13 +9,13 @@ const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 /** GET /api/users  → lista de usuarios (sin exponer hash) */
 router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT id,
               nombre,
               apellido,
               email,
               rol       AS role,
-              activo    AS isActive
+              activo    AS "isActive"
        FROM usuarios
        WHERE email <> 'Administrador@brunandfer.com'
        ORDER BY nombre, apellido`
@@ -37,11 +37,11 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const finalRole = role === 'admin' ? 'admin' : 'user';
 
     // Email único
-    const [dups] = await pool.query(
-      'SELECT id FROM usuarios WHERE email = :email LIMIT 1',
-      { email }
+    const { rows: dups } = await pool.query(
+      'SELECT id FROM usuarios WHERE email = $1 LIMIT 1',
+      [email]
     );
-    if ((dups as any[]).length > 0) {
+    if (dups.length > 0) {
       return res.status(409).json({ error: 'email_ya_registrado' });
     }
 
@@ -50,8 +50,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     await pool.query(
       `INSERT INTO usuarios (nombre, apellido, email, password_hash, rol, activo)
-       VALUES (:nombre, :apellido, :email, :password_hash, :rol, 1)`,
-      { nombre, apellido, email, password_hash, rol: finalRole }
+       VALUES ($1, $2, $3, $4, $5, TRUE)`,
+      [nombre, apellido, email, password_hash, finalRole]
     );
 
     res.status(201).json({ ok: true });
@@ -66,7 +66,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: 'id inválido' });
 
-    await pool.query('DELETE FROM usuarios WHERE id = :id', { id });
+    await pool.query('DELETE FROM usuarios WHERE id = $1', [id]);
     res.json({ ok: true });
   } catch (err) {
     next(err);

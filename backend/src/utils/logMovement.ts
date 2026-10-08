@@ -27,18 +27,17 @@ export async function logMovement(
        (tipo, entidad, entidad_id, nombre_entidad, descripcion, fecha_hora,
         nombre_actor, correo_actor, rol_actor)
      VALUES
-       (:tipo, :entidad, :entidad_id, :nombre_entidad, :descripcion, :fecha_hora,
-        :nombre_actor, :correo_actor, :rol_actor)`,
-    {
-      tipo: type,
-      entidad: entity,
-      entidad_id: entityId ?? null,
-      nombre_entidad: entityName ?? null,
-      descripcion: description ?? "",   // ← aquí ya usamos la que existe
-      fecha_hora: ts ?? new Date(),
-      nombre_actor: actor?.name ?? null,
-      correo_actor: actor?.email ?? null,
-      rol_actor: actor?.role ?? null,
-    }
+       ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      type,
+      entity,
+      entityId ?? null,
+      entityName ?? null,
+      description ?? "",
+      ts ?? new Date(),
+      actor?.name ?? null,
+      actor?.email ?? null,
+      actor?.role ?? null,
+    ]
   );
 }

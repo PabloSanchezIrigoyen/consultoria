@@ -1,34 +1,23 @@
-// src/db.ts
-import 'dotenv/config';
-import mysql from 'mysql2/promise';
+import "dotenv/config";
+import { Pool, types } from "pg";
 
-const {
-  DB_HOST = '127.0.0.1',
-  DB_PORT = '3306',
-  DB_USER = 'root',
-  DB_NAME = 'constructora_app',
-} = process.env;
-const DB_PASS = process.env.DB_PASS ?? process.env.DB_PASSWORD ?? '';
+const connectionString = process.env.DATABASE_URL;
 
-export const pool = mysql.createPool({
-  host: DB_HOST,
-  port: Number(DB_PORT),
-  user: DB_USER,
-  password: DB_PASS,
-  database: DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  namedPlaceholders: true,
-  dateStrings: true,
+if (!connectionString) {
+  throw new Error("DATABASE_URL must be configured for the Supabase PostgreSQL connection.");
+}
+
+types.setTypeParser(20, (value) => Number(value));
+
+export const pool = new Pool({
+  connectionString,
+  ssl: /localhost|127\.0\.0\.1|@db:/.test(connectionString)
+    ? undefined
+    : { rejectUnauthorized: false },
+  max: 10,
 });
 
-
 export async function ping() {
-  const conn = await pool.getConnection();
-  try {
-    await conn.ping();
-    return true;
-  } finally {
-    conn.release();
-  }
+  await pool.query("SELECT 1");
+  return true;
 }

@@ -11,7 +11,7 @@ router.get("/", auth, async (req, res, next) => {
     const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "100")), 1), 500);
     const offset = Math.max(parseInt(String(req.query.offset ?? "0")), 0);
 
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT id,
               tipo            AS type,
               entidad         AS entity,
@@ -24,8 +24,8 @@ router.get("/", auth, async (req, res, next) => {
               rol_actor       AS actor_role
          FROM movimientos
         ORDER BY fecha_hora DESC
-        LIMIT :limit OFFSET :offset`,
-      { limit, offset }
+        LIMIT $1 OFFSET $2`,
+      [limit, offset]
     );
 
     res.json(rows);
@@ -65,19 +65,18 @@ router.post("/", auth, async (req: AuthedRequest, res, next) => {
         (tipo, entidad, entidad_id, nombre_entidad, descripcion, fecha_hora,
          nombre_actor, correo_actor, rol_actor)
        VALUES
-        (:tipo, :entidad, :entidad_id, :nombre_entidad, :descripcion, :fecha_hora,
-         :nombre_actor, :correo_actor, :rol_actor)`,
-      {
-        tipo: String(type),
-        entidad: String(entity),
-        entidad_id: entityId,
-        nombre_entidad: entityName,
-        descripcion: String(description ?? ""),
-        fecha_hora: ts,
-        nombre_actor: req.user?.name ?? null,
-        correo_actor: req.user?.email ?? null,
-        rol_actor: req.user?.role ?? null,
-      }
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        String(type),
+        String(entity),
+        entityId,
+        entityName,
+        String(description ?? ""),
+        ts,
+        req.user?.name ?? null,
+        req.user?.email ?? null,
+        req.user?.role ?? null,
+      ]
     );
 
     res.status(201).json({ ok: true });

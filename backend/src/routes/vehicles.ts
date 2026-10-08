@@ -1,5 +1,6 @@
 // src/routes/vehicles.ts
 import { Router } from "express";
+import type { PoolClient } from "pg";
 import { pool } from "../db";
 import { auth, AuthedRequest } from "../middleware/auth";
 import { logMovement } from "../utils/logMovement";
@@ -9,7 +10,7 @@ const router = Router();
 /** GET /api/vehicles (pública) */
 router.get("/", async (_req, res, next) => {
   try {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT
          id,
          nombre,
@@ -17,7 +18,7 @@ router.get("/", async (_req, res, next) => {
          marca,
          motor,
          modelo,
-         numero_serie   AS numeroSerie,
+         numero_serie   AS "numeroSerie",
          estado,
          kilometraje
        FROM vehiculos
@@ -32,35 +33,37 @@ router.get("/", async (_req, res, next) => {
 
 /** POST /api/vehicles (protegida) */
 router.post("/", auth, async (req: AuthedRequest, res, next) => {
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
+  const { nombre, placa, marca, motor, modelo, numeroSerie, estado, kilometraje } = req.body || {};
+  if (!nombre || !placa || !modelo || !numeroSerie) {
+    return res.status(400).json({ error: "datos_requeridos" });
+  }
 
-    const { nombre, placa, marca, motor, modelo, numeroSerie, estado, kilometraje } = req.body || {};
-    if (!nombre || !placa || !modelo || !numeroSerie) {
-      return res.status(400).json({ error: "datos_requeridos" });
-    }
+  let client: PoolClient | undefined;
+  try {
+    const conn = client = await pool.connect();
+    await conn.query("BEGIN");
 
     const createdBy = req.user?.id ?? null;
 
-    const [result] = await conn.query(
+    const { rows } = await conn.query(
       `INSERT INTO vehiculos
          (nombre, placa, marca, motor, modelo, numero_serie, estado, kilometraje, created_by)
        VALUES
-         (:nombre, :placa, :marca, :motor, :modelo, :numeroSerie, :estado, :kilometraje, :created_by)`,
-      {
+         ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
+      [
         nombre,
         placa,
-        marca: marca ?? "",
-        motor: motor ?? "",
+        marca ?? "",
+        motor ?? "",
         modelo,
         numeroSerie,
-        estado: estado ?? "activo",
-        kilometraje: Number.isFinite(kilometraje) ? kilometraje : 0,
-        created_by: createdBy,
-      }
+        estado ?? "activo",
+        Number.isFinite(kilometraje) ? kilometraje : 0,
+        createdBy,
+      ]
     );
-    const id = (result as any).insertId as number;
+    const id = Number(rows[0].id);
 
     await logMovement(conn, {
       type: "create",
@@ -71,11 +74,11 @@ router.post("/", auth, async (req: AuthedRequest, res, next) => {
       actor: req.user,
     });
 
-    await conn.commit();
+    await conn.query("COMMIT");
     res.status(201).json({ ok: true, id });
   } catch (e: any) {
-    try { await conn.rollback(); } catch {}
-    if (e?.code === "ER_DUP_ENTRY") {
+    if (client) try { await client.query("ROLLBACK"); } catch {}
+    if (e?.code === "23505") {
       return res.status(409).json({
         error: "placa_duplicada",
         message: "La placa ya está registrada en otro vehículo"
@@ -83,48 +86,50 @@ router.post("/", auth, async (req: AuthedRequest, res, next) => {
     }
     next(e);
   } finally {
-    conn.release();
+    client?.release();
   }
 });
 
 /** PUT /api/vehicles/:id (protegida) */
 router.put("/:id", auth, async (req: AuthedRequest, res, next) => {
-  const conn = await pool.getConnection();
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ error: "id_invalido" });
+
+  let client: PoolClient | undefined;
   try {
-    await conn.beginTransaction();
+    const conn = client = await pool.connect();
+    await conn.query("BEGIN");
 
-    const id = Number(req.params.id);
     const { nombre, placa, marca, motor, modelo, numeroSerie, estado, kilometraje } = req.body || {};
-    if (!id) return res.status(400).json({ error: "id_invalido" });
 
-    const [prevRows] = await conn.query(
-      `SELECT * FROM vehiculos WHERE id = :id LIMIT 1`,
-      { id }
+    const { rows: prevRows } = await conn.query(
+      `SELECT * FROM vehiculos WHERE id = $1 LIMIT 1`,
+      [id]
     );
-    const prev = (prevRows as any[])[0];
+    const prev = prevRows[0];
 
     await conn.query(
       `UPDATE vehiculos
-       SET nombre=:nombre,
-           placa=:placa,
-           marca=:marca,
-           motor=:motor,
-           modelo=:modelo,
-           numero_serie=:numeroSerie,
-           estado=:estado,
-           kilometraje=:kilometraje
-       WHERE id=:id`,
-      {
-        id,
+       SET        nombre=$1,
+       placa=$2,
+       marca=$3,
+       motor=$4,
+       modelo=$5,
+       numero_serie=$6,
+       estado=$7,
+       kilometraje=$8
+       WHERE id=$9`,
+      [
         nombre,
         placa,
-        marca: marca ?? "",
-        motor: motor ?? "",
+        marca ?? "",
+        motor ?? "",
         modelo,
         numeroSerie,
-        estado: estado ?? "activo",
-        kilometraje: Number.isFinite(kilometraje) ? kilometraje : 0,
-      }
+        estado ?? "activo",
+        Number.isFinite(kilometraje) ? kilometraje : 0,
+        id,
+      ]
     );
 
     if (prev) {
@@ -148,11 +153,11 @@ router.put("/:id", auth, async (req: AuthedRequest, res, next) => {
       });
     }
 
-    await conn.commit();
+    await conn.query("COMMIT");
     res.json({ ok: true });
   } catch (e: any) {
-    try { await conn.rollback(); } catch {}
-    if (e?.code === "ER_DUP_ENTRY") {
+    if (client) try { await client.query("ROLLBACK"); } catch {}
+    if (e?.code === "23505") {
       return res.status(409).json({
         error: "placa_duplicada",
         message: "La placa ya está registrada en otro vehículo"
@@ -160,38 +165,39 @@ router.put("/:id", auth, async (req: AuthedRequest, res, next) => {
     }
     next(e);
   } finally {
-    conn.release();
+    client?.release();
   }
 });
 
 /** DELETE /api/vehicles/:id (protegida) — SOFT DELETE (estado='baja') */
 router.delete("/:id", auth, async (req: AuthedRequest, res, next) => {
-  const conn = await pool.getConnection();
+  let client: PoolClient | undefined;
   try {
-    await conn.beginTransaction();
+    const conn = client = await pool.connect();
+    await conn.query("BEGIN");
 
     const id = Number(req.params.id);
     if (!id) {
-      await conn.rollback();
+      await conn.query("ROLLBACK");
       return res.status(400).json({ error: "id_invalido" });
     }
 
-    const [rows] = await conn.query(
-      `SELECT id, nombre, placa, estado FROM vehiculos WHERE id = :id LIMIT 1`,
-      { id }
+    const { rows } = await conn.query(
+      `SELECT id, nombre, placa, estado FROM vehiculos WHERE id = $1 LIMIT 1`,
+      [id]
     );
-    const veh = (rows as any[])[0];
+    const veh = rows[0];
     if (!veh) {
-      await conn.rollback();
+      await conn.query("ROLLBACK");
       return res.status(404).json({ error: "vehiculo_no_encontrado" });
     }
 
     if (veh.estado === "baja") {
-      await conn.commit();
+      await conn.query("COMMIT");
       return res.json({ ok: true, softDeleted: true, already: true });
     }
 
-    await conn.query(`UPDATE vehiculos SET estado = 'baja' WHERE id = :id`, { id });
+    await conn.query(`UPDATE vehiculos SET estado = 'baja' WHERE id = $1`, [id]);
 
     const motivo =
       (req.query.motivo as string) ||
@@ -220,13 +226,13 @@ router.delete("/:id", auth, async (req: AuthedRequest, res, next) => {
       console.error("logMovement (vehiculo baja) failed:", e);
     }
 
-    await conn.commit();
+    await conn.query("COMMIT");
     res.json({ ok: true, softDeleted: true });
   } catch (e) {
-    try { await conn.rollback(); } catch {}
+    if (client) try { await client.query("ROLLBACK"); } catch {}
     next(e);
   } finally {
-    conn.release();
+    client?.release();
   }
 });
 

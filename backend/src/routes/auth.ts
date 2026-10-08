@@ -18,7 +18,7 @@ router.post("/login", async (req, res, next) => {
     }
 
     // Ahora apunta a la tabla `usuarios` y columnas `rol`, `activo`
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT
          id,
          nombre,
@@ -28,12 +28,12 @@ router.post("/login", async (req, res, next) => {
          rol    AS role,
          activo AS is_active
        FROM usuarios
-       WHERE email = :email
+       WHERE email = $1
        LIMIT 1`,
-      { email }
+      [email]
     );
 
-    const u = (rows as any[])[0];
+    const u = rows[0];
     if (!u) return res.status(401).json({ error: "invalid_credentials" });
     if (!u.is_active) return res.status(403).json({ error: "inactive_user" });
 

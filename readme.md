@@ -1,14 +1,14 @@
 # App Constructora
 
 Sistema integral de inventario y gestión de vehículos para constructora Brun&Fer.  
-Incluye **backend (Node.js/Express/TypeScript)**, **frontend (React/Vite)**, **base de datos (MariaDB)** y **CI/CD con GitHub Actions**.
+Incluye **backend (Node.js/Express/TypeScript)**, **frontend (React/Vite)**, **base de datos (PostgreSQL/Supabase)** y **CI/CD con GitHub Actions**.
 
 ---
 
 ## 🚀 Tecnologías principales
-- **Backend:** Node.js, Express, TypeScript, pnpm
+- **Backend:** Node.js, Express, TypeScript, npm
 - **Frontend:** React + Vite
-- **Base de datos:** MariaDB
+- **Base de datos:** PostgreSQL
 - **Contenedores:** Docker + Docker Compose
 - **CI/CD:** GitHub Actions
 
@@ -34,18 +34,21 @@ app-constructora/
 git clone https://github.com/edgar0935/app-constructora.git
 cd app-constructora
 
-Instalar dependencias***********
-pnpm install --recursive
+Instalar las dependencias del backend y frontend:
+```bash
+npm --prefix backend ci
+npm --prefix inventario-constructora ci
+```
 
 
 3. Ejecutar backend
 cd backend
-pnpm build
-pnpm start
+npm run build
+npm start
 
 4. Ejecutar frontend
 cd inventario-constructora
-pnpm dev
+npm run dev
 
 🐳 Ejecución con Docker
 En la raíz del proyecto:
@@ -53,7 +56,7 @@ docker-compose up --build
 
 Esto levantará:
 
-MariaDB en localhost:3306
+PostgreSQL en localhost:5432
 
 Backend en http://localhost:5174
 
@@ -77,10 +80,9 @@ Configura el servicio web de Render con:
 - **Build Command:** `npm run build`
 - **Start Command:** `npm start`
 
-Define también las variables de entorno `DB_HOST`, `DB_PORT`, `DB_USER`,
-`DB_PASS` (o `DB_PASSWORD`), `DB_NAME` y `JWT_SECRET` con los datos de una base de datos MySQL
-accesible desde Render. Este backend usa `mysql2`; una instancia PostgreSQL de
-Supabase no es compatible con su controlador actual.
+Define `DATABASE_URL` con la cadena de conexión PostgreSQL de Supabase y
+`JWT_SECRET` con una cadena larga y aleatoria. Usa la cadena PostgreSQL de
+Supabase con SSL habilitado.
 
 El frontend es un servicio independiente de tipo **Static Site**:
 

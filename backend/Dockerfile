@@ -1,26 +1,11 @@
-# Imagen base oficial de Node
-FROM node:18
-
-# Directorio de trabajo
+FROM node:24-alpine
 WORKDIR /app
 
-# Copiamos package.json y pnpm-lock.yaml
-COPY package.json pnpm-lock.yaml* ./
-
-# Instalamos pnpm
-RUN npm install -g pnpm
-
-# Instalamos dependencias
-RUN pnpm install
-
-# Copiamos el resto del código
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 
-# Compilamos TypeScript
-RUN pnpm build
+RUN npm run build
 
-# Exponemos el puerto
 EXPOSE 5174
-
-# Comando de inicio
-CMD ["pnpm", "start"]
+CMD ["npm", "start"]

@@ -86,17 +86,14 @@ export async function apiFetch<T = any>(url: string, opts: Opts = {}): Promise<T
       throw new Error("No autorizado (401)");
     }
 
-    let msg = "";
+    const body = await res.text();
+    let data: { message?: string; error?: string } = {};
     try {
-      const data = await res.json();
-      msg = data?.message || data?.error || "";
+      data = body ? JSON.parse(body) : {};
     } catch {
-      try {
-        msg = await res.text();
-      } catch {
-        // ignore
-      }
+      // Use the response body as a plain-text error below.
     }
+    let msg = data.message || data.error || body;
 
     if (msg.includes("<!DOCTYPE") || msg.trim() === "") {
       msg = `HTTP ${res.status}`;
@@ -106,5 +103,13 @@ export async function apiFetch<T = any>(url: string, opts: Opts = {}): Promise<T
   }
 
   if (res.status === 204) return undefined as unknown as T;
-  return (await res.json()) as T;
+  const body = await res.text();
+  if (!body.trim()) {
+    throw new ApiError("El servidor devolvió una respuesta vacía.", 502);
+  }
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw new ApiError("El servidor devolvió una respuesta no válida.", 502);
+  }
 }

@@ -21,19 +21,18 @@ async function logMovement(opts: {
        (tipo, entidad, entidad_id, nombre_entidad, descripcion, fecha_hora,
         nombre_actor, correo_actor, rol_actor)
      VALUES
-       (:tipo, :entidad, :entidad_id, :nombre_entidad, :descripcion, :fecha_hora,
-        :nombre_actor, :correo_actor, :rol_actor)`,
-    {
-      tipo: type,
-      entidad: entity,
-      entidad_id: entityId ?? null,
-      nombre_entidad: entityName ?? null,
-      descripcion: description,
-      fecha_hora: ts ?? new Date(),
-      nombre_actor: actor?.name ?? null,
-      correo_actor: actor?.email ?? null,
-      rol_actor: actor?.role ?? null,
-    }
+       ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      type,
+      entity,
+      entityId ?? null,
+      entityName ?? null,
+      description,
+      ts ?? new Date(),
+      actor?.name ?? null,
+      actor?.email ?? null,
+      actor?.role ?? null,
+    ]
   );
 }
 
@@ -41,18 +40,18 @@ async function logMovement(opts: {
 async function resolveLocationId(name?: string | null): Promise<number | null> {
   const n = (name ?? "").toString().trim();
   if (!n) return null;
-  const [rows] = await pool.query(
-    "SELECT id FROM ubicaciones WHERE nombre = :name LIMIT 1",
-    { name: n }
+  const { rows } = await pool.query(
+    "SELECT id FROM ubicaciones WHERE nombre = $1 LIMIT 1",
+    [n]
   );
-  const r = (rows as any[])[0];
+  const r = rows[0];
   return r ? Number(r.id) : null;
 }
 
 /** GET /api/inventory → lista con nombre de ubicación (pública) */
 router.get("/", async (_req, res, next) => {
   try {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT i.id,
               i.nombre,
               i.cantidad,
@@ -79,33 +78,25 @@ router.post("/", auth, async (req: AuthedRequest, res, next) => {
     let createdId = id ? Number(id) : null;
 
     if (createdId != null) {
-      await pool.query(
+      const { rows } = await pool.query(
         `INSERT INTO inventario (id, nombre, cantidad, ubicacion_id, created_by)
-         VALUES (:id, :nombre, :cantidad, :ubicacion_id, :created_by)
-         ON DUPLICATE KEY UPDATE
-           nombre = VALUES(nombre),
-           cantidad = VALUES(cantidad),
-           ubicacion_id = VALUES(ubicacion_id)`,
-        {
-          id: createdId,
-          nombre: String(nombre),
-          cantidad: Number(cantidad ?? 0),
-          ubicacion_id: locId,
-          created_by: createdBy,
-        }
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (id) DO UPDATE SET
+           nombre = EXCLUDED.nombre,
+           cantidad = EXCLUDED.cantidad,
+           ubicacion_id = EXCLUDED.ubicacion_id
+         RETURNING id`,
+        [createdId, String(nombre), Number(cantidad ?? 0), locId, createdBy]
       );
+      createdId = Number(rows[0].id);
     } else {
-      const [r] = await pool.query(
+      const { rows } = await pool.query(
         `INSERT INTO inventario (nombre, cantidad, ubicacion_id, created_by)
-         VALUES (:nombre, :cantidad, :ubicacion_id, :created_by)`,
-        {
-          nombre: String(nombre),
-          cantidad: Number(cantidad ?? 0),
-          ubicacion_id: locId,
-          created_by: createdBy,
-        }
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [String(nombre), Number(cantidad ?? 0), locId, createdBy]
       );
-      createdId = (r as any).insertId as number;
+      createdId = Number(rows[0].id);
     }
 
     await logMovement({
@@ -123,7 +114,7 @@ router.post("/", auth, async (req: AuthedRequest, res, next) => {
 
     res.status(201).json({ ok: true, id: createdId });
   } catch (err: any) {
-    if (err?.code === "ER_DUP_ENTRY") {
+    if (err?.code === "23505") {
       return res.status(409).json({ error: "articulo_duplicado_misma_ubicacion" });
     }
     next(err);
@@ -138,29 +129,24 @@ router.put("/:id", auth, async (req: AuthedRequest, res, next) => {
     if (!Number.isFinite(id)) return res.status(400).json({ error: "id inválido" });
     if (!nombre) return res.status(400).json({ error: "nombre requerido" });
 
-    const [prevRows] = await pool.query(
+    const { rows: prevRows } = await pool.query(
       `SELECT i.id, i.nombre, i.cantidad, l.nombre AS ubicacion
        FROM inventario i
        LEFT JOIN ubicaciones l ON l.id = i.ubicacion_id
-       WHERE i.id = :id LIMIT 1`,
-      { id }
+       WHERE i.id = $1 LIMIT 1`,
+      [id]
     );
-    const prev = (prevRows as any[])[0];
+    const prev = prevRows[0];
 
     const locId = await resolveLocationId(ubicacion);
 
-    const [r] = await pool.query(
+    const r = await pool.query(
       `UPDATE inventario
-       SET nombre = :nombre,
-           cantidad = :cantidad,
-           ubicacion_id = :ubicacion_id
-       WHERE id = :id`,
-      {
-        id,
-        nombre: String(nombre),
-        cantidad: Number(cantidad ?? 0),
-        ubicacion_id: locId,
-      }
+       SET nombre = $1,
+           cantidad = $2,
+           ubicacion_id = $3
+       WHERE id = $4`,
+      [String(nombre), Number(cantidad ?? 0), locId, id]
     );
 
     if (prev) {
@@ -194,9 +180,9 @@ router.put("/:id", auth, async (req: AuthedRequest, res, next) => {
       });
     }
 
-    res.json({ ok: true, affected: (r as any).affectedRows ?? 0 });
+    res.json({ ok: true, affected: r.rowCount ?? 0 });
   } catch (err: any) {
-    if (err?.code === "ER_DUP_ENTRY") {
+    if (err?.code === "23505") {
       return res.status(409).json({ error: "articulo_duplicado_misma_ubicacion" });
     }
     next(err);
@@ -209,18 +195,18 @@ router.delete("/:id", auth, async (req: AuthedRequest, res, next) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: "id inválido" });
 
-    const [prevRows] = await pool.query(
-      `SELECT i.id, i.nombre FROM inventario i WHERE i.id = :id LIMIT 1`,
-      { id }
+    const { rows: prevRows } = await pool.query(
+      `SELECT i.id, i.nombre FROM inventario i WHERE i.id = $1 LIMIT 1`,
+      [id]
     );
-    const prev = (prevRows as any[])[0];
+    const prev = prevRows[0];
 
-    const [r] = await pool.query(
-      "DELETE FROM inventario WHERE id = :id",
-      { id }
+    const r = await pool.query(
+      "DELETE FROM inventario WHERE id = $1",
+      [id]
     );
 
-    if ((r as any).affectedRows > 0 && prev) {
+    if ((r.rowCount ?? 0) > 0 && prev) {
       await logMovement({
         type: "delete",
         entity: "articulo",
@@ -235,7 +221,7 @@ router.delete("/:id", auth, async (req: AuthedRequest, res, next) => {
       });
     }
 
-    res.json({ ok: true, affected: (r as any).affectedRows ?? 0 });
+    res.json({ ok: true, affected: r.rowCount ?? 0 });
   } catch (err) {
     next(err);
   }

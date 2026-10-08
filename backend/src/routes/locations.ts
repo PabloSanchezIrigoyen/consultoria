@@ -9,8 +9,8 @@ const router = Router();
 /** GET /api/locations */
 router.get("/", async (_req, res, next) => {
   try {
-    const [rows] = await pool.query("SELECT nombre FROM ubicaciones ORDER BY nombre ASC");
-    res.json((rows as any[]).map(r => r.nombre));
+    const { rows } = await pool.query("SELECT nombre FROM ubicaciones ORDER BY nombre ASC");
+    res.json(rows.map(r => r.nombre));
   } catch (err) {
     next(err);
   }
@@ -23,11 +23,11 @@ router.post("/", auth, async (req: AuthedRequest, res, next) => {
     const clean = String(name || "").trim();
     if (!clean) return res.status(400).json({ error: "nombre requerido" });
 
-    const [result] = await pool.query(
-      "INSERT INTO ubicaciones (nombre, created_by) VALUES (:nombre, :created_by)",
-      { nombre: clean, created_by: req.user?.id ?? null }
+    const { rows } = await pool.query(
+      "INSERT INTO ubicaciones (nombre, created_by) VALUES ($1, $2) RETURNING id",
+      [clean, req.user?.id ?? null]
     );
-    const id = (result as any).insertId as number;
+    const id = rows[0].id as number;
 
     await logMovement(pool, {
       type: "create",
@@ -40,7 +40,7 @@ router.post("/", auth, async (req: AuthedRequest, res, next) => {
 
     res.status(201).json({ ok: true, id });
   } catch (err: any) {
-    if (err?.code === "ER_DUP_ENTRY")
+    if (err?.code === "23505")
       return res.status(409).json({ error: "ubicación ya existe" });
     next(err);
   }
@@ -52,18 +52,18 @@ router.delete("/by-name/:name", auth, async (req: AuthedRequest, res, next) => {
     const name = decodeURIComponent(req.params.name ?? "").trim();
     if (!name) return res.status(400).json({ error: "nombre requerido" });
 
-    const [found] = await pool.query(
-      "SELECT id FROM ubicaciones WHERE nombre = :nombre LIMIT 1",
-      { nombre: name }
+    const { rows: found } = await pool.query(
+      "SELECT id FROM ubicaciones WHERE nombre = $1 LIMIT 1",
+      [name]
     );
-    const row = (found as any[])[0];
+    const row = found[0];
     const id = row?.id ?? null;
 
-    const [r] = await pool.query(
-      "DELETE FROM ubicaciones WHERE nombre = :nombre",
-      { nombre: name }
+    const r = await pool.query(
+      "DELETE FROM ubicaciones WHERE nombre = $1",
+      [name]
     );
-    const affected = (r as any).affectedRows ?? 0;
+    const affected = r.rowCount ?? 0;
 
     if (affected > 0) {
       await logMovement(pool, {
@@ -78,7 +78,7 @@ router.delete("/by-name/:name", auth, async (req: AuthedRequest, res, next) => {
 
     res.json({ ok: true, affected });
   } catch (err: any) {
-    if (err?.code === "ER_ROW_IS_REFERENCED_2")
+    if (err?.code === "23503")
       return res.status(409).json({ error: "ubicacion_en_uso" });
     next(err);
   }

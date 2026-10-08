@@ -8,9 +8,9 @@ Este documento describe los pasos necesarios para instalar y ejecutar el sistema
 
 Antes de comenzar, asegúrate de tener instalado:
 
-- [Node.js](https://nodejs.org/) v18 o superior
-- [pnpm](https://pnpm.io/) como gestor de paquetes
-- [MariaDB](https://mariadb.org/) (si deseas correr la base de datos localmente)
+- [Node.js](https://nodejs.org/) v24 o superior
+- npm (incluido con Node.js)
+- [PostgreSQL](https://www.postgresql.org/) (si deseas correr la base de datos localmente)
 - [Docker](https://www.docker.com/) y [Docker Compose](https://docs.docker.com/compose/) (opcional, para ejecución en contenedores)
 - Git
 
@@ -24,29 +24,29 @@ git clone https://github.com/edgar0935/app-constructora.git
 cd app-constructora
 
 2. Instalar dependencias
-pnpm install --recursive
+```bash
+npm --prefix backend ci
+npm --prefix inventario-constructora ci
+```
 
 3. Configurar la base de datos
-Crea una base de datos en MariaDB llamada constructora_app.
+El archivo `db/constructora_app.sql` crea la estructura y los datos iniciales
+para PostgreSQL. Con Docker Compose, se importa automáticamente en una base
+local llamada `constructora_app`.
 
-Importa el archivo SQL ubicado en db/dump.sql (si existe).
-
-Configura las variables de entorno en backend/.env:
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=tu_password
-DB_NAME=constructora
+Configura `DATABASE_URL` en `backend/.env` con la cadena de conexión de
+PostgreSQL, por ejemplo `postgresql://postgres:tu_password@localhost:5432/constructora_app`.
 JWT_SECRET=tu_clave_segura
 
 4. Ejecutar el backend
 cd backend
-pnpm build
-pnpm start
+npm run build
+npm start
 El backend quedará disponible en http://localhost:5174.
 
 5. Ejecutar el frontend
 cd inventario-constructora
-pnpm dev
+npm run dev
 El frontend quedará disponible en http://localhost:5173.
 
 🐳 Instalación con Docker
@@ -56,7 +56,7 @@ docker-compose up --build
 
 Esto levantará:
 
-MariaDB en localhost:3306
+PostgreSQL en localhost:5432
 
 Backend en http://localhost:5174
 
