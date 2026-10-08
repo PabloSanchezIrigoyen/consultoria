@@ -27,7 +27,8 @@ app.get('/api/health', async (_req, res) => {
   try {
     await ping();
     res.json({ ok: true, db: 'up' });
-  } catch {
+  } catch (err) {
+    console.error('Healthcheck database connection failed:', err);
     res.status(500).json({ ok: false, db: 'down' });
   }
 });

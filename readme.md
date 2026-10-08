@@ -78,7 +78,7 @@ Configura el servicio web de Render con:
 - **Start Command:** `npm start`
 
 Define también las variables de entorno `DB_HOST`, `DB_PORT`, `DB_USER`,
-`DB_PASS`, `DB_NAME` y `JWT_SECRET` con los datos de una base de datos MySQL
+`DB_PASS` (o `DB_PASSWORD`), `DB_NAME` y `JWT_SECRET` con los datos de una base de datos MySQL
 accesible desde Render. Este backend usa `mysql2`; una instancia PostgreSQL de
 Supabase no es compatible con su controlador actual.
 

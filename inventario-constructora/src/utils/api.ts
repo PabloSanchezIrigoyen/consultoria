@@ -11,6 +11,13 @@ type Opts = RequestInit & {
 const LS_KEY = "auth:user";
 const API_ORIGIN = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export function apiUrl(path: string): string {
   return `${API_ORIGIN}/${path.replace(/^\/+/, "")}`;
 }
@@ -95,7 +102,7 @@ export async function apiFetch<T = any>(url: string, opts: Opts = {}): Promise<T
       msg = `HTTP ${res.status}`;
     }
 
-    throw new Error(msg);
+    throw new ApiError(msg, res.status);
   }
 
   if (res.status === 204) return undefined as unknown as T;

@@ -1,5 +1,5 @@
 // src/services/users.ts
-import { apiFetch } from "@/utils/api";   // helper central de fetch
+import { ApiError, apiFetch } from "@/utils/api";
 
 export type Rol = "admin" | "user";
 
@@ -57,8 +57,14 @@ export async function validateCredentials(email: string, password: string) {
           token: res.token,
         };
       }
-    } catch {
-      // intenta el siguiente endpoint
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        return { ok: false } as const;
+      }
+      if (err instanceof ApiError && err.status >= 500) {
+        throw new Error("El servidor de inicio de sesión no está disponible. Intenta de nuevo más tarde.");
+      }
+      throw err;
     }
   }
 
