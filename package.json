@@ -4,9 +4,9 @@
   "description": "Backend de consultora",
   "main": "src/index.ts",
   "scripts": {
-    "build": "echo 'No build needed'",
-    "start": "npx ts-node src/index.ts"
-  },
+  "build": "echo 'No build needed'",
+  "start": "ts-node src/index.ts"
+},
   "dependencies": {
     "axios": "^1.20.0",
     "cors": "^2.8.5",
