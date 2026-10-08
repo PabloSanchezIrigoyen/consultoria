@@ -64,3 +64,20 @@ Frontend en http://localhost:5173
 El backend usa JWT para proteger rutas privadas.
 Configura tu .env con:
 JWT_SECRET=tu_clave_segura
+
+## Despliegue del backend en Render
+
+El backend está dentro de `backend/`; el `package.json` de la raíz delega los
+comandos a esa carpeta para que Render pueda construir desde la raíz del
+repositorio sin buscar `src/index.ts` en una ruta incorrecta.
+
+Configura el servicio web de Render con:
+
+- **Root Directory:** vacío (raíz del repositorio)
+- **Build Command:** `npm run build`
+- **Start Command:** `npm start`
+
+Define también las variables de entorno `DB_HOST`, `DB_PORT`, `DB_USER`,
+`DB_PASS`, `DB_NAME` y `JWT_SECRET` con los datos de una base de datos MySQL
+accesible desde Render. Este backend usa `mysql2`; una instancia PostgreSQL de
+Supabase no es compatible con su controlador actual.
