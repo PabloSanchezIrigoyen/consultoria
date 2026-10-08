@@ -1,0 +1,119 @@
+/* === Pantalla de carga (Splash) === */
+.splash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  z-index: 9999; /* encima de todo */
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.45) 40%, transparent 70%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 2px, transparent 3px, transparent 6px),
+    linear-gradient(135deg, #ffffff 0%, #fdf4f4 15%, #b11b1f 100%);  /* Fondo igual al de tu app */
+  background-blend-mode: overlay, normal;
+  background-attachment: fixed;  /* Asegura que el fondo no se mueva con el contenido */
+}
+
+/* Fondo de pantalla (backdrop) */
+.splash-backdrop {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #fdf4f4 15%,
+    #b11b1f 100%
+  );
+  opacity: 0.1;
+  z-index: -1;
+}
+
+.splash-logo {
+  display: flex;
+  flex-direction: row;  /* Logo y texto en fila */
+  align-items: center;   /* Alinea el icono y el texto en el centro */
+  gap: 20px;  /* Aumenté el espacio entre el icono y el texto */
+  padding: 12px 32px;
+  background-color: #fff;  /* Fondo blanco */
+  border-radius: 10px;  /* Bordes redondeados */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  opacity: 0;  /* Para la animación */
+  animation: slideIn 1s ease forwards; /* Animación de deslizamiento */
+}
+
+.splash-logo .icon {
+  width: 120px;  /* Tamaño del icono */
+}
+
+.splash-logo .icon svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  transform: skewX(-22deg);
+}
+
+.splash-logo .red {
+  fill: #c8102e;
+}
+
+.splash-logo .text {
+  text-align: left;  /* Alineación del texto */
+}
+
+.splash-logo .main {
+  font-size: 46px;  /* Aumenté el tamaño de las letras de "BRUN & FER" */
+  font-weight: 900; /* Negrita */
+  color: #000;
+  display: flex;
+  gap: 15px;  /* Aumenté el espacio entre las palabras "BRUN", "&", y "FER" */
+  letter-spacing: 9.5px; /* Aumenté el espaciado entre las letras */
+  transform: translate(13px);
+  transform: skewX(-10deg);
+}
+
+.splash-logo .subtitle {
+  font-size: 18px; /* Aumenté el tamaño del subtítulo */
+  color: #444;  /* Gris para el subtítulo */
+  margin-left: 4px; /* Espacio entre "FER" y el subtítulo */
+  font-weight: 400;
+  transform: skewX(-10deg);
+}
+
+/* === Animación === */
+@keyframes slideIn {
+  from { transform: translateY(-50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* === Responsividad === */
+@media (max-width: 480px) {
+  .splash-logo .icon {
+    width: 80px;  /* Reduce el tamaño del icono en pantallas pequeñas */
+  }
+  .splash-logo .main {
+    font-size: 32px;  /* Ajusté el tamaño en pantallas más pequeñas */
+  }
+  .splash-logo .subtitle {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .splash-logo .icon {
+    width: 90px;
+  }
+  .splash-logo .main {
+    font-size: 36px;  /* Ajusté el tamaño en pantallas medianas */
+  }
+}
+
+@media (min-width: 1024px) {
+  .splash-logo .icon {
+    width: 120px;
+  }
+  .splash-logo .main {
+    font-size: 46px;  /* Tamaño de la fuente en pantallas grandes */
+  }
+}

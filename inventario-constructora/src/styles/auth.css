@@ -1,0 +1,232 @@
+/* === Pantalla de carga (Splash) === */
+.login-page {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  isolation: isolate;
+}
+
+/* Fondo */
+.login-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(255, 255, 255, 0.45) 40%,
+      transparent 70%
+    ),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04) 0px,
+      rgba(255, 255, 255, 0.04) 2px,
+      transparent 3px,
+      transparent 6px
+    ),
+    linear-gradient(
+      135deg,
+      #ffffff 0%,
+      #fdf4f4 15%,
+      #b11b1f 100%
+    );
+  background-blend-mode: overlay, normal;
+  z-index: -1;
+}
+
+.login-card {
+  width: min(92vw, 440px);
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(177, 27, 31, 0.25);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
+  padding: 28px 28px 20px;
+}
+
+/* Logo dentro de caja cuadrada (sin animación ni contorno rojo) */
+.login-logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.logo-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  width: 70px;  /* Tamaño cuadrado */
+  height: 70px;  /* Hacemos el logo cuadrado */
+  background: #ffffff;
+  border: none; /* sin contorno rojo */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 15px;  /* Bordes redondeados */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;  /* Ajusté el padding para hacerlo más cuadrado */
+  /* Elimina el transform skew para que se vea recto */
+}
+
+.logo-box .icon {
+  width: 45px;
+}
+
+.logo-box .icon svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  transform: skewX(-22deg);
+}
+
+.logo-box .red {
+  fill: #c8102e;
+}
+
+.logo-box .text {
+  text-align: center;
+  /* Elimina el transform skew para que se vea recto */
+}
+
+.logo-box .main {
+  font-size: 11px;
+  font-weight: 900;
+  color: #000;
+}
+
+.login-title {
+  margin: 12px 0 20px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Formulario */
+.login-form { display: grid; gap: 16px; }
+
+/* Panel de inputs */
+.input-panel {
+  background: #ffffff;
+  border: 1px solid #e9eef5;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: inset 0 1px 0 rgba(17,24,39,.02);
+}
+.input-panel .field + .field { margin-top: 12px; }
+
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 14px; font-weight: 600; color: #374151; }
+
+.input-panel input {
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  padding: 0 14px;
+  font-size: 15px;
+  color: #111827;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.input-panel input:focus {
+  border-color: #b11b1f;
+  box-shadow: 0 0 0 3px rgba(177, 27, 31, 0.25);
+}
+
+/* Password con toggle */
+.password-input { position: relative; }
+.password-input .has-toggle { padding-right: 120px; }
+
+.toggle-pass {
+  position: absolute;
+  top: 50%; right: 0.5px;
+  transform: translateY(-50%);
+  height: 32px; padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 12px; font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toggle-pass:hover { background: #f3f4f6; }
+
+.field.checkbox { display: flex; align-items: center; gap: 8px; }
+
+/* Error */
+.login-error {
+  margin-top: 12px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background-color: rgba(255, 0, 0, 0.08);
+  border: 1px solid rgba(255, 0, 0, 0.25);
+  color: #b00020;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Botón */
+.btn-primary.login-submit {
+  width: 100%;
+  height: 46px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #b11b1f, #8a1216);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(177, 27, 31, 0.3);
+  cursor: pointer;
+  transition: transform .04s ease, filter .15s ease;
+}
+.btn-primary.login-submit:hover { filter: brightness(1.03); }
+.login-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+.login-submit:active:not(:disabled) {
+  transform: scale(0.98);
+  transition: transform 0.05s;
+}
+
+.login-hint {
+  margin-top: 14px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* === Responsividad === */
+@media (max-width: 480px) {
+  .login-card {
+    width: 100%;
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+  .login-title { font-size: 18px; }
+  .input-panel input { font-size: 14px; height: 40px; }
+  .password-input .has-toggle { padding-right: 80px; }
+  .toggle-pass { font-size: 11px; padding: 0 8px; height: 28px; }
+  .btn-primary.login-submit { height: 42px; font-size: 14px; }
+
+  .logo-box {
+    width: 100px;
+    height: 100px;
+  }
+  .logo-box .icon { width: 60px; }
+  .logo-box .main { font-size: 14px; }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .login-card { width: 85vw; padding: 24px; }
+  .login-title { font-size: 20px; }
+  .btn-primary.login-submit { font-size: 15px; }
+}
+
+@media (min-width: 1024px) {
+  .login-card { width: 440px; }
+}

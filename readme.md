@@ -65,7 +65,7 @@ El backend usa JWT para proteger rutas privadas.
 Configura tu .env con:
 JWT_SECRET=tu_clave_segura
 
-## Despliegue del backend en Render
+## Despliegue en Render
 
 El backend está dentro de `backend/`; el `package.json` de la raíz delega los
 comandos a esa carpeta para que Render pueda construir desde la raíz del
@@ -81,3 +81,14 @@ Define también las variables de entorno `DB_HOST`, `DB_PORT`, `DB_USER`,
 `DB_PASS`, `DB_NAME` y `JWT_SECRET` con los datos de una base de datos MySQL
 accesible desde Render. Este backend usa `mysql2`; una instancia PostgreSQL de
 Supabase no es compatible con su controlador actual.
+
+El frontend es un servicio independiente de tipo **Static Site**:
+
+- **Root Directory:** `inventario-constructora`
+- **Build Command:** `npm ci && npm run build`
+- **Publish Directory:** `dist`
+- **Environment Variable:** `VITE_API_URL=https://<URL-publica-del-backend>`
+- **Rewrite:** `/*` a `/index.html` para que funcionen las rutas de React Router.
+
+En el servicio web del backend permite solicitudes CORS desde el dominio
+publicado del frontend si restringes los orígenes permitidos.
